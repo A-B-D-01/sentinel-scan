@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Scan #{{ scan.id }} - SentinelScan
+    </title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- =========================================
+         PAGE HEADER
+    ========================================== -->
+
+    <div class="header">
+
+        <div class="header-title">
+
+            <h1>
+                Scan #{{ scan.id }}
+            </h1>
+
+            <p>
+                SentinelScan Security Assessment
+            </p>
+
+        </div>
+
+
+        <div class="header-actions">
+
+            <!-- Dashboard -->
+
+            <a
+                href="{{ url_for('index') }}"
+                class="button button-dashboard"
+            >
+                ← Dashboard
+            </a>
+
+
+            <div class="export-actions">
+                <!-- JSON Export -->
+                <a
+                    href="{{
+                        url_for(
+                            'export_scan_json',
+                            scan_id=scan.id
+                        )
+                    }}"
+                    class="button button-small button-json"
+                >
+                    Export JSON
+                </a>
+
+                <!-- CSV Export -->
+                <a
+                    href="{{
+                        url_for(
+                            'export_scan_csv',
+                            scan_id=scan.id
+                        )
+                    }}"
+                    class="button button-small button-csv"
+                >
+                    Export CSV
+                </a>
+
+                <!-- PDF Export -->
+                <a
+                    href="{{
+                        url_for(
+                            'export_scan_pdf',
+                            scan_id=scan.id
+                        )
+                    }}"
+                    class="button button-small button-pdf"
+                >
+                    Export PDF
+                </a>
+            </div>
+
+            <!-- Compare -->
+
+            {% if previous_scan %}
+            <a
+                href="{{
+                    url_for(
+                        'compare_scans',
+                        scan_id=scan.id,
+                        previous_scan_id=previous_scan.id
+                    )
+                }}"
+                class="button button-compare"
+            >
+                Compare vs #{{ previous_scan.id }}
+            </a>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         SCAN INFORMATION
+    ========================================== -->
+
+    <div class="card">
+
+        <h2>
+            Scan Information
+        </h2>
+
+
+        <div class="info-grid">
+
+
+            <!-- Target -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Target
+                </div>
+
+                <div class="info-value">
+                    {{ scan.target_url }}
+                </div>
+
+            </div>
+
+
+            <!-- Status -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Status
+                </div>
+
+                <div class="info-value">
+
+                    {% if scan.status == "completed" %}
+
+                        <span
+                            class="status completed"
+                        >
+                            Completed
+                        </span>
+
+                    {% elif scan.status == "running" %}
+
+                        <span
+                            class="status running"
+                        >
+                            Running
+                        </span>
+
+                    {% else %}
+
+                        <span
+                            class="status failed"
+                        >
+                            Failed
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- Started -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Started
+                </div>
+
+                <div class="info-value">
+                    {{ scan.started_at or "—" }}
+                </div>
+
+            </div>
+
+
+            <!-- Completed -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Completed
+                </div>
+
+                <div class="info-value">
+                    {{ scan.completed_at or "—" }}
+                </div>
+
+            </div>
+
+            <!-- Duration -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Duration (s)
+                </div>
+
+                <div class="info-value">
+                    {% if scan.completed_at and scan.started_at %}
+                        {{ (scan.completed_at - scan.started_at).total_seconds() | int }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- Pages Scanned -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Pages Scanned
+                </div>
+
+                <div class="info-value">
+                    {{ scan.pages_scanned }}
+                </div>
+
+            </div>
+
+            <!-- Forms Discovered -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Forms Discovered
+                </div>
+
+                <div class="info-value">
+                    {{ scan.forms_discovered }}
+                </div>
+
+            </div>
+
+            <!-- Requests Made -->
+
+            <div class="info-box">
+
+                <div class="info-label">
+                    Requests Made
+                </div>
+
+                <div class="info-value">
+                    {{ scan.requests_made }}
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         SEVERITY SUMMARY
+    ========================================== -->
+
+    <div class="card">
+
+        <h2>
+            Severity Summary
+        </h2>
+
+
+        <div class="severity-grid">
+
+
+            <!-- Critical -->
+
+            <div
+                class="
+                    severity-box
+                    severity-critical
+                "
+            >
+
+                <div class="severity-number">
+                    {{ severity_counts["Critical"] }}
+                </div>
+
+                <div class="severity-label">
+                    Critical
+                </div>
+
+            </div>
+
+
+            <!-- High -->
+
+            <div
+                class="
+                    severity-box
+                    severity-high
+                "
+            >
+
+                <div class="severity-number">
+                    {{ severity_counts["High"] }}
+                </div>
+
+                <div class="severity-label">
+                    High
+                </div>
+
+            </div>
+
+
+            <!-- Medium -->
+
+            <div
+                class="
+                    severity-box
+                    severity-medium
+                "
+            >
+
+                <div class="severity-number">
+                    {{ severity_counts["Medium"] }}
+                </div>
+
+                <div class="severity-label">
+                    Medium
+                </div>
+
+            </div>
+
+
+            <!-- Low -->
+
+            <div
+                class="
+                    severity-box
+                    severity-low
+                "
+            >
+
+                <div class="severity-number">
+                    {{ severity_counts["Low"] }}
+                </div>
+
+                <div class="severity-label">
+                    Low
+                </div>
+
+            </div>
+
+
+            <!-- Info -->
+
+            <div
+                class="
+                    severity-box
+                    severity-info
+                "
+            >
+
+                <div class="severity-number">
+                    {{ severity_counts["Info"] }}
+                </div>
+
+                <div class="severity-label">
+                    Informational
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         SECURITY FINDINGS
+    ========================================== -->
+
+    <div class="card">
+
+        <h2>
+            Security Findings
+        </h2>
+
+
+        {% if scan.findings %}
+
+
+            {% for finding in scan.findings %}
+
+
+                <div class="finding">
+
+
+                    <!-- FINDING HEADER -->
+
+                    <div class="finding-header">
+
+                        <h3 class="finding-title">
+                            {{ finding.vulnerability_type }}
+                        </h3>
+
+
+                        {% set severity =
+                            finding.severity.lower()
+                        %}
+
+
+                        <span
+                            class="
+                                severity-badge
+                                badge-{{ severity }}
+                            "
+                        >
+                            {{ finding.severity }}
+                        </span>
+
+                    </div>
+
+
+                    <!-- FINDING BODY -->
+
+                    <div class="finding-body">
+
+
+                        <!-- Metadata -->
+
+                        <div class="finding-meta">
+
+
+                            <!-- URL -->
+
+                            <div class="meta-item">
+
+                                <span class="meta-label">
+                                    URL
+                                </span>
+
+                                <span class="meta-value">
+                                    {{ finding.url }}
+                                </span>
+
+                            </div>
+
+
+                            <!-- Parameter -->
+
+                            <div class="meta-item">
+
+                                <span class="meta-label">
+                                    Parameter
+                                </span>
+
+                                <span class="meta-value">
+                                    {{ finding.parameter or "—" }}
+                                </span>
+
+                            </div>
+
+
+                            <!-- Confidence -->
+
+                            <div class="meta-item">
+
+                                <span class="meta-label">
+                                    Confidence
+                                </span>
+
+                                <span class="meta-value">
+                                    {{ finding.confidence or "—" }}
+                                </span>
+
+                            </div>
+
+
+                            <!-- Detected -->
+
+                            <div class="meta-item">
+
+                                <span class="meta-label">
+                                    Detected
+                                </span>
+
+                                <span class="meta-value">
+                                    {{ finding.created_at or "—" }}
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Description -->
+
+                        {% if finding.description %}
+
+                            <div class="finding-section">
+
+                                <h3>
+                                    Description
+                                </h3>
+
+                                <p>
+                                    {{ finding.description }}
+                                </p>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- Impact -->
+
+                        {% if finding.impact %}
+
+                            <div class="finding-section">
+
+                                <h3>
+                                    Potential Impact
+                                </h3>
+
+                                <p>
+                                    {{ finding.impact }}
+                                </p>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- Evidence -->
+
+                        {% if finding.evidence %}
+
+                            <div class="finding-section">
+
+                                <h3>
+                                    Evidence
+                                </h3>
+
+                                <div class="evidence">
+                                    {{ finding.evidence }}
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- Remediation -->
+
+                        {% if finding.remediation %}
+
+                            <div class="finding-section">
+
+                                <h3>
+                                    Remediation
+                                </h3>
+
+                                <div class="remediation">
+
+                                    <p>
+                                        {{ finding.remediation }}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+
+                    </div>
+
+                </div>
+
+
+            {% endfor %}
+
+
+        {% else %}
+
+
+            <div class="empty">
+
+                No security findings were detected
+                during this scan.
+
+            </div>
+
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- =========================================
+         FOOTER
+    ========================================== -->
+
+    <div class="footer">
+
+        SentinelScan · Authorized Local Security Testing
+
+    </div>
+
+
+</div>
+
+</body>
+
+</html>

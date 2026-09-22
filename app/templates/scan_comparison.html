@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Scan Comparison - SentinelScan</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <div>
+            <h1>Scan Comparison</h1>
+            <p>SentinelScan security assessment comparison</p>
+        </div>
+
+        <a href="{{ url_for('index') }}" class="button">
+            Dashboard
+        </a>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>Comparison Details</h2>
+
+        <p>
+            <strong>Previous Scan:</strong>
+            #{{ previous_scan.id }}
+        </p>
+
+        <p>
+            <strong>Current Scan:</strong>
+            #{{ current_scan.id }}
+        </p>
+
+        <p>
+            <strong>Target:</strong>
+            {{ current_scan.target_url }}
+        </p>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <h3>Previous Findings</h3>
+            <div class="number">
+                {{ previous_scan.findings|length }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Current Findings</h3>
+            <div class="number">
+                {{ current_scan.findings|length }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>New Findings</h3>
+            <div class="number">
+                {{ new_findings|length }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Fixed Findings</h3>
+            <div class="number">
+                {{ fixed_findings|length }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Severity Increased</h3>
+            <div class="number">
+                {{ severity_increase|length }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Severity Decreased</h3>
+            <div class="number">
+                {{ severity_decrease|length }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Confidence Changed</h3>
+            <div class="number">
+                {{ confidence_changes|length }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Evidence Changed</h3>
+            <div class="number">
+                {{ evidence_changes|length }}
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <h2>New Findings</h2>
+
+        {% if new_findings %}
+
+            {% for finding in new_findings %}
+
+                <div class="finding">
+
+                    <h3>
+                        {{ finding.vulnerability_type }}
+                    </h3>
+
+                    <p>
+                        <span class="badge">
+                            {{ finding.severity }}
+                        </span>
+                    </p>
+
+                    <p>
+                        <strong>URL:</strong>
+                        {{ finding.url }}
+                    </p>
+
+                    {% if finding.parameter %}
+                    <p>
+                        <strong>Parameter:</strong>
+                        {{ finding.parameter }}
+                    </p>
+                    {% endif %}
+
+                    <p>
+                        {{ finding.evidence }}
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p class="empty">
+                No new findings were detected.
+            </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <div class="section">
+
+        <h2>Fixed Findings</h2>
+
+        {% if fixed_findings %}
+
+            {% for finding in fixed_findings %}
+
+                <div class="finding">
+
+                    <h3>
+                        {{ finding.vulnerability_type }}
+                    </h3>
+
+                    <p>
+                        <span class="badge">
+                            {{ finding.severity }}
+                        </span>
+                    </p>
+
+                    <p>
+                        <strong>URL:</strong>
+                        {{ finding.url }}
+                    </p>
+
+                    {% if finding.parameter %}
+                    <p>
+                        <strong>Parameter:</strong>
+                        {{ finding.parameter }}
+                    </p>
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p class="empty">
+                No findings from the previous scan were absent
+                in the current scan.
+            </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <div class="section">
+        <h2>Severity Increases</h2>
+        {% if severity_increase %}
+            {% for change in severity_increase %}
+                <div class="finding">
+                    <h3>{{ change.finding.vulnerability_type }}</h3>
+                    <p><strong>Previous Severity:</strong> {{ change.previous_severity }}</p>
+                    <p><strong>Current Severity:</strong> {{ change.current_severity }}</p>
+                    <p><strong>URL:</strong> {{ change.finding.url }}</p>
+                    {% if change.finding.parameter %}
+                    <p><strong>Parameter:</strong> {{ change.finding.parameter }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty">No severity increases were detected.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Severity Decreases</h2>
+        {% if severity_decrease %}
+            {% for change in severity_decrease %}
+                <div class="finding">
+                    <h3>{{ change.finding.vulnerability_type }}</h3>
+                    <p><strong>Previous Severity:</strong> {{ change.previous_severity }}</p>
+                    <p><strong>Current Severity:</strong> {{ change.current_severity }}</p>
+                    <p><strong>URL:</strong> {{ change.finding.url }}</p>
+                    {% if change.finding.parameter %}
+                    <p><strong>Parameter:</strong> {{ change.finding.parameter }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty">No severity decreases were detected.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Confidence Changes</h2>
+        {% if confidence_changes %}
+            {% for change in confidence_changes %}
+                <div class="finding">
+                    <h3>{{ change.finding.vulnerability_type }}</h3>
+                    <p><strong>Previous Confidence:</strong> {{ change.previous_confidence }}</p>
+                    <p><strong>Current Confidence:</strong> {{ change.current_confidence }}</p>
+                    <p><strong>URL:</strong> {{ change.finding.url }}</p>
+                    {% if change.finding.parameter %}
+                    <p><strong>Parameter:</strong> {{ change.finding.parameter }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty">No confidence changes were detected.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Evidence Changes</h2>
+        {% if evidence_changes %}
+            {% for change in evidence_changes %}
+                <div class="finding">
+                    <h3>{{ change.finding.vulnerability_type }}</h3>
+                    <p><strong>Previous Evidence:</strong> {{ change.previous_evidence }}</p>
+                    <p><strong>Current Evidence:</strong> {{ change.current_evidence }}</p>
+                    <p><strong>URL:</strong> {{ change.finding.url }}</p>
+                    {% if change.finding.parameter %}
+                    <p><strong>Parameter:</strong> {{ change.finding.parameter }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty">No evidence changes were detected.</p>
+        {% endif %}
+    </div>
+
+        <h2>Unchanged Findings</h2>
+
+        {% if unchanged_findings %}
+
+            {% for finding in unchanged_findings %}
+
+                <div class="finding">
+
+                    <h3>
+                        {{ finding.vulnerability_type }}
+                    </h3>
+
+                    <p>
+                        <span class="badge">
+                            {{ finding.severity }}
+                        </span>
+                    </p>
+
+                    <p>
+                        <strong>URL:</strong>
+                        {{ finding.url }}
+                    </p>
+
+                    {% if finding.parameter %}
+                    <p>
+                        <strong>Parameter:</strong>
+                        {{ finding.parameter }}
+                    </p>
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p class="empty">
+                No unchanged findings.
+            </p>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+</body>
+</html>

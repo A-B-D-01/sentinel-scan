@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>SentinelScan - Security Scanner</title>
+
+    <!-- SentinelScan CSS -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <header class="header">
+
+        <div>
+            <h1>SentinelScan</h1>
+            <p>Web Application Security Scanner</p>
+        </div>
+        <div class="authorized-badge">
+            Authorized Local Target
+        </div>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         FLASH MESSAGES
+         ===================================================== -->
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+
+            <div class="flash-container">
+
+                {% for category, message in messages %}
+
+                    <div class="flash-message {{ category }}">
+
+                        {{ message }}
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% endif %}
+
+    {% endwith %}
+
+
+
+    <!-- =====================================================
+         STATISTICS
+         ===================================================== -->
+
+    <section class="stats-grid">
+
+
+        <!-- Total Scans -->
+
+        <div class="stat-card stat-total-scans">
+
+            <div class="stat-card-title">
+                Total Scans
+            </div>
+
+            <div class="stat-card-value">
+                {{ total_scans }}
+            </div>
+
+        </div>
+
+
+        <!-- Total Findings -->
+
+        <div class="stat-card stat-total-findings">
+
+            <div class="stat-card-title">
+                Total Findings
+            </div>
+
+            <div class="stat-card-value">
+                {{ total_findings }}
+            </div>
+
+        </div>
+
+
+        <!-- Critical -->
+
+        <div class="stat-card stat-critical">
+
+            <div class="stat-card-title">
+                Critical
+            </div>
+
+            <div class="stat-card-value">
+                {{ critical_count }}
+            </div>
+
+        </div>
+
+
+        <!-- High -->
+
+        <div class="stat-card stat-high">
+
+            <div class="stat-card-title">
+                High
+            </div>
+
+            <div class="stat-card-value">
+                {{ high_count }}
+            </div>
+
+        </div>
+
+
+        <!-- Medium -->
+
+        <div class="stat-card stat-medium">
+
+            <div class="stat-card-title">
+                Medium
+            </div>
+
+            <div class="stat-card-value">
+                {{ medium_count }}
+            </div>
+
+        </div>
+
+
+        <!-- Low -->
+
+        <div class="stat-card stat-low">
+
+            <div class="stat-card-title">
+                Low
+            </div>
+
+            <div class="stat-card-value">
+                {{ low_count }}
+            </div>
+
+        </div>
+
+
+        <!-- Info -->
+
+        <div class="stat-card stat-info">
+
+            <div class="stat-card-title">
+                Info
+            </div>
+
+            <div class="stat-card-value">
+                {{ info_count }}
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         START SECURITY SCAN
+         ===================================================== -->
+
+    <section class="scan-card">
+
+        <h2>
+            Start Security Scan
+        </h2>
+
+        <p class="scan-card-description">
+            Scan an authorized local application.
+        </p>
+
+
+        <form
+            method="POST"
+            action="{{ url_for('start_scan') }}"
+            class="scan-form"
+        >
+
+            <input
+                type="url"
+                name="target_url"
+                class="scan-input"
+                value="http://127.0.0.1:8000"
+                placeholder="http://127.0.0.1:8000"
+                required
+            >
+
+
+            <button
+                type="submit"
+                class="scan-button"
+            >
+                Start Scan
+            </button>
+
+        </form>
+
+
+        <p class="scan-help">
+            Only authorized localhost targets are permitted.
+        </p>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         SEVERITY + VULNERABILITY TYPES
+         ===================================================== -->
+
+    <section class="dashboard-grid">
+
+
+        <!-- =================================================
+             SEVERITY DISTRIBUTION
+             ================================================= -->
+
+        <div class="card">
+
+            <h2>
+                Severity Distribution
+            </h2>
+
+            <p class="card-description">
+                Distribution of detected security findings.
+            </p>
+
+
+            <!-- Critical -->
+
+            <div class="severity-item">
+
+                <div class="severity-label">
+
+                    <span>
+                        Critical
+                    </span>
+
+                    <strong>
+                        {{ critical_count }}
+                    </strong>
+
+                </div>
+
+                <div class="severity-bar">
+
+                    <div
+                        class="severity-fill critical"
+                        style="width: {% if total_findings > 0 %}{{ (critical_count / total_findings * 100)|round(1) }}{% else %}0{% endif %}%"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- High -->
+
+            <div class="severity-item">
+
+                <div class="severity-label">
+
+                    <span>
+                        High
+                    </span>
+
+                    <strong>
+                        {{ high_count }}
+                    </strong>
+
+                </div>
+
+                <div class="severity-bar">
+
+                    <div
+                        class="severity-fill high"
+                        style="width: {% if total_findings > 0 %}{{ (high_count / total_findings * 100)|round(1) }}{% else %}0{% endif %}%"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Medium -->
+
+            <div class="severity-item">
+
+                <div class="severity-label">
+
+                    <span>
+                        Medium
+                    </span>
+
+                    <strong>
+                        {{ medium_count }}
+                    </strong>
+
+                </div>
+
+                <div class="severity-bar">
+
+                    <div
+                        class="severity-fill medium"
+                        style="width: {% if total_findings > 0 %}{{ (medium_count / total_findings * 100)|round(1) }}{% else %}0{% endif %}%"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Low -->
+
+            <div class="severity-item">
+
+                <div class="severity-label">
+
+                    <span>
+                        Low
+                    </span>
+
+                    <strong>
+                        {{ low_count }}
+                    </strong>
+
+                </div>
+
+                <div class="severity-bar">
+
+                    <div
+                        class="severity-fill low"
+                        style="width: {% if total_findings > 0 %}{{ (low_count / total_findings * 100)|round(1) }}{% else %}0{% endif %}%"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Informational -->
+
+            <div class="severity-item">
+
+                <div class="severity-label">
+
+                    <span>
+                        Informational
+                    </span>
+
+                    <strong>
+                        {{ info_count }}
+                    </strong>
+
+                </div>
+
+                <div class="severity-bar">
+
+                    <div
+                        class="severity-fill info"
+                        style="width: {% if total_findings > 0 %}{{ (info_count / total_findings * 100)|round(1) }}{% else %}0{% endif %}%"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             VULNERABILITY TYPES
+             ================================================= -->
+
+        <div class="card">
+
+            <h2>
+                Vulnerability Types
+            </h2>
+
+            <p class="card-description">
+                Findings grouped by vulnerability category.
+            </p>
+
+
+            {% if vulnerability_types %}
+
+                <div class="vulnerability-list">
+
+                    {% for vulnerability, count in vulnerability_types.items() %}
+
+                        <div class="vulnerability-item">
+
+                            <span>
+                                {{ vulnerability }}
+                            </span>
+
+                            <span class="vulnerability-count">
+                                {{ count }}
+                            </span>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="empty-state">
+
+                    No vulnerability findings yet.
+
+                </div>
+
+            {% endif %}
+
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         SECURITY FINDINGS TREND
+         ===================================================== -->
+
+    <section class="chart-card">
+
+        <div class="chart-header">
+
+            <div>
+
+                <h2>
+                    Security Findings Trend
+                </h2>
+
+                <p>
+                    Findings detected across previous scans.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="chart-container">
+
+            <canvas
+                id="findingsTrendChart"
+            ></canvas>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         VULNERABILITY DISTRIBUTION
+         ===================================================== -->
+
+    <section class="chart-card">
+
+        <div class="chart-header">
+
+            <div>
+
+                <h2>
+                    Vulnerability Distribution
+                </h2>
+
+                <p>
+                    Distribution of detected vulnerability types.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="chart-container chart-doughnut">
+
+            <canvas
+                id="vulnerabilityDistributionChart"
+            ></canvas>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         SCAN HISTORY
+         ===================================================== -->
+
+    <section class="card" id="scan-history">
+
+        <h2>
+            Scan History
+        </h2>
+
+        <p class="card-description">
+            Previous SentinelScan assessments.
+        </p>
+
+
+
+        <!-- =================================================
+             SEARCH / FILTER FORM
+             ================================================= -->
+
+        <form
+            method="GET"
+            action="{{ url_for('index') }}#scan-history"
+            class="scan-filter-form"
+        >
+
+
+            <!-- Search -->
+
+            <div class="filter-group">
+
+                <label for="search">
+                    Target URL
+                </label>
+
+                <input
+                    type="text"
+                    id="search"
+                    name="search"
+                    placeholder="Search target URL..."
+                    value="{{ search }}"
+                >
+
+            </div>
+
+
+
+            <!-- Status -->
+
+            <div class="filter-group">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    <option value="" {% if not status_filter %}selected{% endif %}>All Statuses</option>
+                    <option value="completed" {% if status_filter == "completed" %}selected{% endif %}>Completed</option>
+                    <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>Failed</option>
+                    <option value="running" {% if status_filter == "running" %}selected{% endif %}>Running</option>
+                </select>
+            </div>
+
+            <!-- Date From -->
+            <div class="filter-group">
+                <label for="date_from">Date From</label>
+                <input type="date" id="date_from" name="date_from" value="{{ date_from }}">
+            </div>
+
+            <!-- Date To -->
+            <div class="filter-group">
+                <label for="date_to">Date To</label>
+                <input type="date" id="date_to" name="date_to" value="{{ date_to }}">
+            </div>
+
+            <!-- Severity -->
+            <div class="filter-group">
+                <label for="severity">Severity</label>
+                <select id="severity" name="severity">
+                    <option value="" {% if not severity_filter %}selected{% endif %}>All Severities</option>
+                    <option value="Critical" {% if severity_filter == "Critical" %}selected{% endif %}>Critical</option>
+                    <option value="High" {% if severity_filter == "High" %}selected{% endif %}>High</option>
+                    <option value="Medium" {% if severity_filter == "Medium" %}selected{% endif %}>Medium</option>
+                    <option value="Low" {% if severity_filter == "Low" %}selected{% endif %}>Low</option>
+                    <option value="Info" {% if severity_filter == "Info" %}selected{% endif %}>Info</option>
+                </select>
+            </div>
+
+            <!-- Vulnerability -->
+            <div class="filter-group">
+                <label for="vulnerability">Vulnerability</label>
+                <select id="vulnerability" name="vulnerability">
+                    <option value="" {% if not vulnerability_filter %}selected{% endif %}>All Types</option>
+                    {% for v_type in vulnerability_types.keys() %}
+                        <option value="{{ v_type }}" {% if vulnerability_filter == v_type %}selected{% endif %}>{{ v_type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Search Button -->
+
+            <button
+                type="submit"
+                class="filter-button"
+            >
+                Search
+            </button>
+
+
+
+            <!-- Clear Button -->
+
+            <a
+                href="{{ url_for('index') }}#scan-history"
+                class="clear-button"
+            >
+                Clear
+            </a>
+
+
+        </form>
+
+
+
+        <!-- =================================================
+             SCAN TABLE
+             ================================================= -->
+
+        <div class="table-wrapper">
+
+            <table class="scan-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Scan
+                        </th>
+
+                        <th>
+                            Target
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th>
+                            Started
+                        </th>
+
+                        <th>
+                            Findings
+                        </th>
+
+                        <th>
+                            Requests
+                        </th>
+
+                        <th>
+                            Errors
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                    {% for scan in scans %}
+
+                    <tr>
+
+
+                        <!-- Scan ID -->
+
+                        <td>
+
+                            <a
+                                href="{{ url_for(
+                                    'scan_details',
+                                    scan_id=scan.id
+                                ) }}"
+                                class="scan-link"
+                            >
+                                #{{ scan.id }}
+                            </a>
+
+                        </td>
+
+
+                        <!-- Target -->
+
+                        <td>
+
+                            <span class="target-url">
+                                {{ scan.target_url }}
+                            </span>
+
+                        </td>
+
+
+                        <!-- Status -->
+
+                        <td>
+
+                            <span
+                                class="status-badge
+                                {% if scan.status == 'completed' %}
+                                    completed
+                                {% elif scan.status == 'failed' %}
+                                    failed
+                                {% elif scan.status == 'running' %}
+                                    running
+                                {% else %}
+                                    pending
+                                {% endif %}"
+                            >
+
+                                {{ scan.status|capitalize }}
+
+                            </span>
+
+                        </td>
+
+
+                        <!-- Started -->
+
+                        <td>
+
+                            {% if scan.started_at %}
+
+                                {{ scan.started_at.strftime(
+                                    "%Y-%m-%d %H:%M:%S"
+                                ) }}
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- Findings -->
+
+                        <td>
+
+                            <strong>
+                                {{ scan.findings|length }}
+                            </strong>
+
+                        </td>
+
+                        <!-- Requests -->
+
+                        <td>
+                            {{ scan.requests_made if scan.requests_made else 0 }}
+                        </td>
+
+                        <!-- Errors -->
+
+                        <td>
+                            {{ scan.errors_count if scan.errors_count else 0 }}
+                        </td>
+
+
+                    </tr>
+
+                    {% endfor %}
+
+
+
+                    {% if not scans %}
+
+                    <tr>
+
+                        <td
+                            colspan="5"
+                            class="no-results"
+                        >
+
+                            No scans match your search criteria.
+
+                        </td>
+
+                    </tr>
+
+                    {% endif %}
+
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <div class="pagination">
+            {% if pagination.has_prev %}
+                <a class="page-link" href="{{ url_for('index', page=pagination.prev_num, search=search, status=status_filter, date_from=date_from, date_to=date_to, severity=severity_filter, vulnerability=vulnerability_filter) }}#scan-history">Previous</a>
+            {% else %}
+                <span class="page-link disabled">Previous</span>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                        <span class="page-link active">{{ page_num }}</span>
+                    {% else %}
+                        <a class="page-link" href="{{ url_for('index', page=page_num, search=search, status=status_filter, date_from=date_from, date_to=date_to, severity=severity_filter, vulnerability=vulnerability_filter) }}#scan-history">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    <span class="page-ellipsis">...</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+                <a class="page-link" href="{{ url_for('index', page=pagination.next_num, search=search, status=status_filter, date_from=date_from, date_to=date_to, severity=severity_filter, vulnerability=vulnerability_filter) }}#scan-history">Next</a>
+            {% else %}
+                <span class="page-link disabled">Next</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+
+    <footer class="footer">
+
+        <p>
+            SentinelScan
+            &bull;
+            Authorized Local Security Testing
+        </p>
+
+    </footer>
+
+
+</div>
+
+
+
+<!-- =========================================================
+     CHART JAVASCRIPT
+     ========================================================= -->
+
+<script>
+
+
+/* =========================================================
+   SECURITY FINDINGS TREND
+   ========================================================= */
+
+async function loadScanTrends() {
+
+    try {
+
+        const response = await fetch(
+            "{{ url_for('scan_trends') }}"
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to load scan trend data."
+            );
+
+        }
+
+
+        const data = await response.json();
+
+
+        const canvas = document.getElementById(
+            "findingsTrendChart"
+        );
+
+
+        if (!canvas) {
+
+            console.error(
+                "findingsTrendChart canvas not found."
+            );
+
+            return;
+
+        }
+
+
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "line",
+
+
+                data: {
+
+                    labels: data.labels,
+
+
+                    datasets: [
+
+                        {
+
+                            label: "Total Findings",
+
+                            data:
+                                data.total_findings,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 4,
+
+                            pointHoverRadius: 6
+
+                        },
+
+
+                        {
+
+                            label: "Critical",
+
+                            data:
+                                data.critical,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 3
+
+                        },
+
+
+                        {
+
+                            label: "High",
+
+                            data:
+                                data.high,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 3
+
+                        },
+
+
+                        {
+
+                            label: "Medium",
+
+                            data:
+                                data.medium,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 3
+
+                        },
+
+
+                        {
+
+                            label: "Low",
+
+                            data:
+                                data.low,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 3
+
+                        }
+
+                    ]
+
+                },
+
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+
+                    interaction: {
+
+                        intersect: false,
+
+                        mode: "index"
+
+                    },
+
+
+                    plugins: {
+
+                        legend: {
+
+                            position: "bottom"
+
+                        },
+
+
+                        tooltip: {
+
+                            enabled: true
+
+                        }
+
+                    },
+
+
+                    scales: {
+
+                        y: {
+
+                            beginAtZero: true,
+
+                            ticks: {
+
+                                precision: 0
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Failed to load scan trends:",
+            error
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   VULNERABILITY DISTRIBUTION
+   ========================================================= */
+
+async function loadVulnerabilityDistribution() {
+
+    try {
+
+        const response = await fetch(
+            "{{ url_for(
+                'vulnerability_distribution'
+            ) }}"
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to load vulnerability distribution."
+            );
+
+        }
+
+
+        const data = await response.json();
+
+
+        const canvas = document.getElementById(
+            "vulnerabilityDistributionChart"
+        );
+
+
+        if (!canvas) {
+
+            console.error(
+                "vulnerabilityDistributionChart canvas not found."
+            );
+
+            return;
+
+        }
+
+
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "doughnut",
+
+
+                data: {
+
+                    labels: data.labels,
+
+
+                    datasets: [
+
+                        {
+
+                            label: "Findings",
+
+                            data: data.values,
+
+                            borderWidth: 2
+
+                        }
+
+                    ]
+
+                },
+
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+
+                    plugins: {
+
+                        legend: {
+
+                            position: "right"
+
+                        },
+
+
+                        tooltip: {
+
+                            enabled: true
+
+                        }
+
+                    }
+
+
+                }
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Failed to load vulnerability distribution:",
+            error
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   LOAD DASHBOARD CHARTS
+   ========================================================= */
+
+loadScanTrends();
+
+loadVulnerabilityDistribution();
+
+
+</script>
+
+
+</body>
+
+</html>
