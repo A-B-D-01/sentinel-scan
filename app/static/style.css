@@ -340,6 +340,13 @@ h1, h2, h3, h4 {
 .stat-low .stat-card-value, .low { color: var(--low); }
 .stat-info .stat-card-value, .info { color: var(--info); }
 
+/* Semantic Badges */
+.badge.critical { color: var(--critical); border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
+.badge.high { color: var(--high); border-color: rgba(249, 115, 22, 0.4); background: rgba(249, 115, 22, 0.1); }
+.badge.medium { color: var(--medium); border-color: rgba(234, 179, 8, 0.4); background: rgba(234, 179, 8, 0.1); }
+.badge.low { color: var(--low); border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.1); }
+.badge.info { color: var(--info); border-color: rgba(115, 115, 115, 0.4); background: rgba(115, 115, 115, 0.1); }
+
 /* Dashboard Grid */
 .dashboard-grid {
     display: grid;

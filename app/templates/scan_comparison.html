@@ -129,7 +129,7 @@
                     </h3>
 
                     <p>
-                        <span class="badge">
+                        <span class="badge {{ finding.severity|lower }}">
                             {{ finding.severity }}
                         </span>
                     </p>
@@ -180,7 +180,7 @@
                     </h3>
 
                     <p>
-                        <span class="badge">
+                        <span class="badge {{ finding.severity|lower }}">
                             {{ finding.severity }}
                         </span>
                     </p>
@@ -219,8 +219,8 @@
             {% for change in severity_increase %}
                 <div class="finding">
                     <h3>{{ change.finding.vulnerability_type }}</h3>
-                    <p><strong>Previous Severity:</strong> {{ change.previous_severity }}</p>
-                    <p><strong>Current Severity:</strong> {{ change.current_severity }}</p>
+                    <p><strong>Previous Severity:</strong> <span class="badge {{ change.previous_severity|lower }}">{{ change.previous_severity }}</span></p>
+                    <p><strong>Current Severity:</strong> <span class="badge {{ change.current_severity|lower }}">{{ change.current_severity }}</span></p>
                     <p><strong>URL:</strong> {{ change.finding.url }}</p>
                     {% if change.finding.parameter %}
                     <p><strong>Parameter:</strong> {{ change.finding.parameter }}</p>
@@ -238,8 +238,8 @@
             {% for change in severity_decrease %}
                 <div class="finding">
                     <h3>{{ change.finding.vulnerability_type }}</h3>
-                    <p><strong>Previous Severity:</strong> {{ change.previous_severity }}</p>
-                    <p><strong>Current Severity:</strong> {{ change.current_severity }}</p>
+                    <p><strong>Previous Severity:</strong> <span class="badge {{ change.previous_severity|lower }}">{{ change.previous_severity }}</span></p>
+                    <p><strong>Current Severity:</strong> <span class="badge {{ change.current_severity|lower }}">{{ change.current_severity }}</span></p>
                     <p><strong>URL:</strong> {{ change.finding.url }}</p>
                     {% if change.finding.parameter %}
                     <p><strong>Parameter:</strong> {{ change.finding.parameter }}</p>
@@ -302,7 +302,7 @@
                     </h3>
 
                     <p>
-                        <span class="badge">
+                        <span class="badge {{ finding.severity|lower }}">
                             {{ finding.severity }}
                         </span>
                     </p>
