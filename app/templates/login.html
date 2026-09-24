@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SentinelScan</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+
+<div class="auth-container">
+    <div class="auth-header">
+        <h2>SentinelScan</h2>
+        <p>Welcome back. Log in to your account.</p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div style="margin-bottom: 1.5rem;">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}" style="border-left: 4px solid {% if category == 'error' %}var(--critical){% else %}var(--low){% endif %}; padding: 0.75rem 1rem;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="auth-input-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" class="auth-input" placeholder="Enter your username" required autofocus>
+        </div>
+        
+        <div class="auth-input-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="auth-input" placeholder="Enter your password" required>
+        </div>
+        
+        <button type="submit" class="auth-button">Sign In</button>
+    </form>
+    
+    <div class="auth-link">
+        Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
+    </div>
+</div>
+
+</body>
+</html>

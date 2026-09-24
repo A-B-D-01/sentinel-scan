@@ -14,9 +14,15 @@ from flask import (
     jsonify,
     Response
 )
+from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import CSRFProtect
+from flask_talisman import Talisman
 
 from config import Config
 from models.scan import db, Scan, Finding
+from models.user import User
 
 from scanner.scan_service import run_scan
 
@@ -24,7 +30,32 @@ app = Flask(__name__)
 
 app.config.from_object(Config)
 
+# Security
+csrf = CSRFProtect(app)
+csp = {
+    'default-src': [
+        '\'self\'',
+        'https://cdn.jsdelivr.net',
+        '\'unsafe-inline\''
+    ]
+}
+talisman = Talisman(app, content_security_policy=csp, force_https=False)
+
 db.init_app(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+# Global ThreadPool for bounding concurrent scans
+scan_executor = ThreadPoolExecutor(max_workers=5)
+
+with app.app_context():
+    db.create_all()
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(User, int(user_id))
 
 
 def is_allowed_target(url):
@@ -49,10 +80,54 @@ def is_allowed_target(url):
         return False
 
 
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return redirect(url_for("register"))
+            
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists", "error")
+            return redirect(url_for("register"))
+        user = User(username=username)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        login_user(user)
+        return redirect(url_for("index"))
+    return render_template("register.html")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for("index"))
+        flash("Invalid username or password", "error")
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
+
 @app.route("/api/scan-trends")
+@login_required
 def scan_trends():
 
-    scans = Scan.query.order_by(
+    scans = Scan.query.filter_by(user_id=current_user.id).order_by(
         Scan.id.asc()
     ).all()
 
@@ -118,9 +193,10 @@ def scan_trends():
     })
 
 @app.route("/api/vulnerability-distribution")
+@login_required
 def vulnerability_distribution():
 
-    findings = Finding.query.all()
+    findings = Finding.query.join(Scan).filter(Scan.user_id == current_user.id).all()
 
     distribution = {}
 
@@ -138,6 +214,7 @@ def vulnerability_distribution():
     })
 
 @app.route("/")
+@login_required
 def index():
     search = request.args.get("search", "").strip()
     status_filter = request.args.get("status", "").strip()
@@ -147,7 +224,7 @@ def index():
     vulnerability_filter = request.args.get("vulnerability", "").strip()
     page = request.args.get("page", 1, type=int)
 
-    scans_query = Scan.query
+    scans_query = Scan.query.filter_by(user_id=current_user.id)
 
     if search:
         scans_query = scans_query.filter(Scan.target_url.ilike(f"%{search}%"))
@@ -178,33 +255,38 @@ def index():
     pagination = scans_query.order_by(Scan.id.desc()).paginate(page=page, per_page=10, error_out=False)
     scans = pagination.items
 
-    total_scans = Scan.query.count()
+    total_scans = Scan.query.filter_by(user_id=current_user.id).count()
 
-    total_findings = Finding.query.count()
+    total_findings = Finding.query.join(Scan).filter(Scan.user_id == current_user.id).count()
 
-    critical_count = Finding.query.filter_by(
-        severity="Critical"
+    critical_count = Finding.query.join(Scan).filter(
+        Scan.user_id == current_user.id,
+        Finding.severity == "Critical"
     ).count()
 
-    high_count = Finding.query.filter_by(
-        severity="High"
+    high_count = Finding.query.join(Scan).filter(
+        Scan.user_id == current_user.id,
+        Finding.severity == "High"
     ).count()
 
-    medium_count = Finding.query.filter_by(
-        severity="Medium"
+    medium_count = Finding.query.join(Scan).filter(
+        Scan.user_id == current_user.id,
+        Finding.severity == "Medium"
     ).count()
 
-    low_count = Finding.query.filter_by(
-        severity="Low"
+    low_count = Finding.query.join(Scan).filter(
+        Scan.user_id == current_user.id,
+        Finding.severity == "Low"
     ).count()
 
-    info_count = Finding.query.filter_by(
-        severity="Info"
+    info_count = Finding.query.join(Scan).filter(
+        Scan.user_id == current_user.id,
+        Finding.severity == "Info"
     ).count()
 
     vulnerability_types = {}
 
-    for finding in Finding.query.all():
+    for finding in Finding.query.join(Scan).filter(Scan.user_id == current_user.id).all():
 
         vulnerability_type = (
             finding.vulnerability_type
@@ -237,7 +319,21 @@ def index():
         vulnerability_filter=vulnerability_filter
     )
 
+@app.route("/api/scan-progress/<int:scan_id>")
+@login_required
+def scan_progress(scan_id):
+    scan = Scan.query.filter_by(id=scan_id, user_id=current_user.id).first()
+    if not scan:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify({
+        "id": scan.id,
+        "status": scan.status,
+        "progress": scan.progress,
+        "progress_status": scan.progress_status
+    })
+
 @app.route("/scan", methods=["POST"])
+@login_required
 def start_scan():
     target_url = request.form.get("target_url", "").strip()
 
@@ -249,33 +345,45 @@ def start_scan():
         return redirect(url_for("index"))
 
     try:
-        result = run_scan(target_url)
+        scan = Scan(
+            target_url=target_url,
+            status="pending",
+            started_at=datetime.utcnow(),
+            user_id=current_user.id
+        )
+        db.session.add(scan)
+        db.session.commit()
+        scan_id = scan.id
 
-        if result["status"] == "completed":
-            flash(
-                f"Scan #{result['scan_id']} completed. "
-                f"Findings: {result['findings_count']}",
-                "success"
-            )
-        else:
-            flash(
-                f"Scan #{result['scan_id']} failed: "
-                f"{result.get('error', 'Unknown error')}",
-                "error"
-            )
+        def background_scan(app_context, s_id):
+            with app_context:
+                try:
+                    run_scan(s_id)
+                except Exception as e:
+                    # Fallback error handling if scan_service fails catastrophically
+                    scan_record = db.session.get(Scan, s_id)
+                    if scan_record and scan_record.status != "completed":
+                        scan_record.status = "failed"
+                        scan_record.progress_status = f"System Error: {str(e)}"
+                        scan_record.completed_at = datetime.utcnow()
+                        db.session.commit()
+                finally:
+                    db.session.remove()
+
+        scan_executor.submit(background_scan, app.app_context(), scan_id)
+
+        flash(f"Scan #{scan_id} started in the background.", "success")
 
     except Exception as error:
-        flash(f"Scan failed: {error}", "error")
+        flash(f"Failed to start scan: {error}", "error")
 
     return redirect(url_for("index"))
 
 @app.route("/scans/<int:scan_id>")
+@login_required
 def scan_details(scan_id):
 
-    scan = db.get_or_404(
-        Scan,
-        scan_id
-    )
+    scan = Scan.query.filter_by(id=scan_id, user_id=current_user.id).first_or_404()
 
     severity_counts = {
         "Critical": 0,
@@ -293,6 +401,7 @@ def scan_details(scan_id):
             severity_counts[severity] += 1
 
     previous_scan = Scan.query.filter(
+        Scan.user_id == current_user.id,
         Scan.target_url == scan.target_url,
         Scan.id < scan.id
     ).order_by(Scan.id.desc()).first()
@@ -371,16 +480,18 @@ def get_comparison_data(current_scan, previous_scan):
     }
 
 @app.route("/scans/<int:scan_id>/compare/<int:previous_scan_id>")
+@login_required
 def compare_scans(scan_id, previous_scan_id):
-    current_scan = db.get_or_404(Scan, scan_id)
-    previous_scan = db.get_or_404(Scan, previous_scan_id)
+    current_scan = Scan.query.filter_by(id=scan_id, user_id=current_user.id).first_or_404()
+    previous_scan = Scan.query.filter_by(id=previous_scan_id, user_id=current_user.id).first_or_404()
     comparison = get_comparison_data(current_scan, previous_scan)
     return render_template("scan_comparison.html", **comparison)
 
 
 @app.route("/scans/<int:scan_id>/export/csv")
+@login_required
 def export_scan_csv(scan_id):
-    scan = db.get_or_404(Scan, scan_id)
+    scan = Scan.query.filter_by(id=scan_id, user_id=current_user.id).first_or_404()
     si = StringIO()
     cw = csv.writer(si)
     cw.writerow(["ID", "Vulnerability Type", "Severity", "Confidence", "URL", "Parameter", "Created At"])
@@ -402,12 +513,10 @@ def export_scan_csv(scan_id):
     )
 
 @app.route("/scans/<int:scan_id>/export/json")
+@login_required
 def export_scan_json(scan_id):
 
-    scan = db.get_or_404(
-        Scan,
-        scan_id
-    )
+    scan = Scan.query.filter_by(id=scan_id, user_id=current_user.id).first_or_404()
 
     report = {
         "scanner": "SentinelScan",
@@ -467,7 +576,7 @@ def export_scan_json(scan_id):
             )
         })
 
-    previous_scan = Scan.query.filter(Scan.target_url == scan.target_url, Scan.id < scan.id).order_by(Scan.id.desc()).first()
+    previous_scan = Scan.query.filter(Scan.user_id == current_user.id, Scan.target_url == scan.target_url, Scan.id < scan.id).order_by(Scan.id.desc()).first()
     if previous_scan:
         comp_data = get_comparison_data(scan, previous_scan)
         report["comparison"] = {
@@ -499,16 +608,14 @@ def health():
 
 
 @app.route("/scans/<int:scan_id>/export/pdf")
+@login_required
 def export_scan_pdf(scan_id):
 
-    scan = db.get_or_404(
-        Scan,
-        scan_id
-    )
+    scan = Scan.query.filter_by(id=scan_id, user_id=current_user.id).first_or_404()
 
     from scanner.pdf_report import generate_scan_pdf
 
-    previous_scan = Scan.query.filter(Scan.target_url == scan.target_url, Scan.id < scan.id).order_by(Scan.id.desc()).first()
+    previous_scan = Scan.query.filter(Scan.user_id == current_user.id, Scan.target_url == scan.target_url, Scan.id < scan.id).order_by(Scan.id.desc()).first()
     comp_data = get_comparison_data(scan, previous_scan) if previous_scan else None
 
     pdf_buffer = generate_scan_pdf(
@@ -527,11 +634,6 @@ def export_scan_pdf(scan_id):
     )
 
 if __name__ == "__main__":
-
-    with app.app_context():
-
-        db.create_all()
-
     app.run(
         host="127.0.0.1",
         port=5000,

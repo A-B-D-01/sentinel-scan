@@ -1,7 +1,11 @@
 import time
 import requests
+import urllib3
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+# Suppress insecure request warnings when scanning local test environments
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class ScannerEngine:
     def __init__(self, timeout=5, retries=2, rate_limit_delay=0.0):
@@ -13,6 +17,7 @@ class ScannerEngine:
         self.last_request_time = 0
         
         self.session = requests.Session()
+        self.session.verify = False  # Allow scanning self-signed certs locally
         self.session.headers.update({
             "User-Agent": "SentinelScan-ScannerEngine/1.0"
         })

@@ -45,14 +45,22 @@
 
         <div class="header-actions">
 
-            <!-- Dashboard -->
+            <!-- Compare -->
 
+            {% if previous_scan %}
             <a
-                href="{{ url_for('index') }}"
-                class="button button-dashboard"
+                href="{{
+                    url_for(
+                        'compare_scans',
+                        scan_id=scan.id,
+                        previous_scan_id=previous_scan.id
+                    )
+                }}"
+                class="button button-compare"
             >
-                ← Dashboard
+                Compare vs #{{ previous_scan.id }}
             </a>
+            {% endif %}
 
 
             <div class="export-actions">
@@ -96,22 +104,14 @@
                 </a>
             </div>
 
-            <!-- Compare -->
+            <!-- Dashboard -->
 
-            {% if previous_scan %}
             <a
-                href="{{
-                    url_for(
-                        'compare_scans',
-                        scan_id=scan.id,
-                        previous_scan_id=previous_scan.id
-                    )
-                }}"
-                class="button button-compare"
+                href="{{ url_for('index') }}"
+                class="button button-dashboard"
             >
-                Compare vs #{{ previous_scan.id }}
+                Dashboard →
             </a>
-            {% endif %}
 
         </div>
 
@@ -165,10 +165,11 @@
                             Completed
                         </span>
 
-                    {% elif scan.status == "running" %}
+                    {% elif scan.status == "running" or scan.status == "pending" %}
 
                         <span
                             class="status running"
+                            id="scan-status"
                         >
                             Running
                         </span>
@@ -281,6 +282,37 @@
 
     </div>
 
+
+    <!-- =========================================
+         SCAN PROGRESS
+    ========================================== -->
+
+    {% if scan.status == "pending" or scan.status == "running" %}
+    <div class="card" id="progress-card">
+        <h2>Scan Progress</h2>
+        <div class="progress-bar-container" style="background-color: #eee; border-radius: 4px; overflow: hidden; height: 20px; margin-bottom: 10px;">
+            <div id="progress-bar" style="width: {{ scan.progress }}%; background-color: #007bff; height: 100%; transition: width 0.3s;"></div>
+        </div>
+        <p id="progress-text">{{ scan.progress_status }}</p>
+    </div>
+
+    <script>
+        function pollProgress() {
+            fetch("{{ url_for('scan_progress', scan_id=scan.id) }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        window.location.reload();
+                    } else {
+                        document.getElementById("progress-bar").style.width = data.progress + "%";
+                        document.getElementById("progress-text").innerText = data.progress_status;
+                        setTimeout(pollProgress, 1000);
+                    }
+                });
+        }
+        setTimeout(pollProgress, 1000);
+    </script>
+    {% endif %}
 
     <!-- =========================================
          SEVERITY SUMMARY

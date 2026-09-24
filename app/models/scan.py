@@ -18,6 +18,9 @@ class Scan(db.Model):
     errors_count = db.Column(db.Integer, default=0)
     pages_scanned = db.Column(db.Integer, default=0)
     forms_discovered = db.Column(db.Integer, default=0)
+    progress = db.Column(db.Integer, default=0)
+    progress_status = db.Column(db.String(100), default="Initializing")
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     findings = db.relationship(
         "Finding",

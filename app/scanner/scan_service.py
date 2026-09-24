@@ -7,6 +7,8 @@ from scanner.xss_scanner import XSSScanner
 from scanner.sqli_scanner import SQLiScanner
 from scanner.csrf_scanner import CSRFScanner
 from scanner.security_headers import SecurityHeadersScanner
+from scanner.directory_scanner import DirectoryScanner
+from scanner.info_disclosure import InfoDisclosureScanner
 from scanner.severity import normalize_severity
 from scanner.vulnerability_info import get_vulnerability_info
 
@@ -97,18 +99,18 @@ def save_finding(
     return finding
 
 
-def run_scan(target_url):
+def run_scan(scan_id):
 
-    scan = Scan(
-        target_url=target_url,
-        status="running",
-        started_at=datetime.utcnow()
-    )
+    scan = db.session.get(Scan, scan_id)
+    if not scan:
+        return {"status": "error", "error": "Scan not found"}
 
-    db.session.add(scan)
-    db.session.commit()
+    target_url = scan.target_url
 
     try:
+        scan.progress = 5
+        scan.progress_status = "Initializing"
+        db.session.commit()
 
         print(
             f"[SCAN] Starting scan #{scan.id}"
@@ -121,6 +123,9 @@ def run_scan(target_url):
         # ==================================================
         # 1. CRAWLER
         # ==================================================
+        scan.progress = 10
+        scan.progress_status = "Crawling website..."
+        db.session.commit()
 
         engine = ScannerEngine(timeout=5, retries=2, rate_limit_delay=0.0)
 
@@ -135,7 +140,7 @@ def run_scan(target_url):
         if not result["pages"]:
 
             scan.status = "failed"
-
+            scan.progress_status = "Failed: Target could not be reached."
             scan.completed_at = datetime.utcnow()
 
             db.session.commit()
@@ -168,6 +173,10 @@ def run_scan(target_url):
         csrf_scanner = CSRFScanner(engine)
 
         headers_scanner = SecurityHeadersScanner(engine)
+        
+        dir_scanner = DirectoryScanner(engine)
+        
+        info_scanner = InfoDisclosureScanner(engine)
 
         findings_count = 0
         seen_findings = set()
@@ -175,6 +184,10 @@ def run_scan(target_url):
         # ==================================================
         # 3. SCAN URL PARAMETERS
         # ==================================================
+        
+        scan.progress = 30
+        scan.progress_status = "Scanning URL parameters..."
+        db.session.commit()
 
         for page in result["pages"]:
 
@@ -272,6 +285,10 @@ def run_scan(target_url):
         # ==================================================
         # 4. SCAN FORMS
         # ==================================================
+        
+        scan.progress = 60
+        scan.progress_status = "Scanning forms..."
+        db.session.commit()
 
         for form in result["forms"]:
 
@@ -435,6 +452,10 @@ def run_scan(target_url):
         print(
             "[HEADERS] Scanning security headers"
         )
+        
+        scan.progress = 90
+        scan.progress_status = "Scanning security headers..."
+        db.session.commit()
 
         headers_result = headers_scanner.scan(
             target_url
@@ -463,10 +484,51 @@ def run_scan(target_url):
                 )
 
         # ==================================================
-        # 6. COMPLETE SCAN
+        # 6. ADDITIONAL SCANNERS
+        # ==================================================
+        scan.progress = 95
+        scan.progress_status = "Scanning for directory listing and info disclosure..."
+        db.session.commit()
+
+        dir_result = dir_scanner.scan(target_url)
+        for dir_finding in dir_result["findings"]:
+            finding = save_finding(
+                scan=scan,
+                vulnerability_type=dir_finding["type"],
+                severity=dir_finding["severity"],
+                url=dir_finding["url"],
+                parameter=None,
+                evidence=dir_finding["evidence"],
+                seen_findings=seen_findings,
+                confidence=dir_finding["confidence"]
+            )
+            if finding:
+                findings_count += 1
+                print(f"[DIR] Finding: {dir_finding['type']}")
+
+        info_result = info_scanner.scan(target_url)
+        for info_finding in info_result["findings"]:
+            finding = save_finding(
+                scan=scan,
+                vulnerability_type=info_finding["type"],
+                severity=info_finding["severity"],
+                url=info_finding["url"],
+                parameter=None,
+                evidence=info_finding["evidence"],
+                seen_findings=seen_findings,
+                confidence=info_finding["confidence"]
+            )
+            if finding:
+                findings_count += 1
+                print(f"[INFO] Finding: {info_finding['type']}")
+
+        # ==================================================
+        # 7. COMPLETE SCAN
         # ==================================================
 
         scan.status = "completed"
+        scan.progress = 100
+        scan.progress_status = "Scan completed successfully."
 
         scan.completed_at = datetime.utcnow()
         scan.requests_made = engine.requests_made
@@ -499,6 +561,7 @@ def run_scan(target_url):
     except Exception as error:
 
         scan.status = "failed"
+        scan.progress_status = f"Failed: {str(error)}"
 
         scan.completed_at = datetime.utcnow()
         

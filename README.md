@@ -1842,6 +1842,12 @@ app/static/css/style.css
 [x] Scan search
 [x] Status filtering
 [x] External CSS
+[x] Background asynchronous scanning
+[x] User authentication
+[x] Application security (CSRF, Security Headers)
+[x] Docker support
+[x] Directory Listing scanner
+[x] Information Disclosure scanner
 ```
 
 ---
@@ -2037,11 +2043,11 @@ Progress: 72%
 Potential features:
 
 ```text
-[ ] Login
-[ ] Registration
-[ ] Password hashing
-[ ] Sessions
-[ ] User-specific scans
+[x] Login
+[x] Registration
+[x] Password hashing
+[x] Sessions
+[x] User-specific scans
 ```
 
 Potential database:
@@ -2061,21 +2067,21 @@ Authentication should be introduced after the scanner is stable.
 SentinelScan itself should eventually be hardened with:
 
 ```text
-[ ] CSRF protection
+[x] CSRF protection
 
-[ ] Secure cookies
+[x] Secure cookies
 
-[ ] Session security
+[x] Session security
 
-[ ] Input validation
+[x] Input validation
 
-[ ] Security headers
+[x] Security headers
 
-[ ] Secret management
+[x] Secret management
 
-[ ] Error handling
+[x] Error handling
 
-[ ] Debug disabled
+[x] Debug disabled
 ```
 
 ---
@@ -2146,9 +2152,9 @@ Potential future modules:
 
 [ ] CORS Misconfiguration
 
-[ ] Information Disclosure
+[x] Information Disclosure
 
-[ ] Directory Listing
+[x] Directory Listing
 
 [ ] Server Information Disclosure
 

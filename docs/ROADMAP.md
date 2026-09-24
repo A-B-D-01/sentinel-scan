@@ -234,11 +234,11 @@ Progress:
 
 Potential features:
 
-- login
-- registration
-- password hashing
-- session management
-- user-specific scans
+- [x] login
+- [x] registration
+- [x] password hashing
+- [x] session management
+- [x] user-specific scans
 
 Database:
 
@@ -254,21 +254,21 @@ Only introduce after scanner stability.
 
 Harden SentinelScan itself:
 
-[ ] CSRF protection
+[x] CSRF protection
 
-[ ] Secure cookies
+[x] Secure cookies
 
-[ ] Session security
+[x] Session security
 
-[ ] Input validation
+[x] Input validation
 
-[ ] Security headers
+[x] Security headers
 
-[ ] Secret management
+[x] Secret management
 
-[ ] Error handling
+[x] Error handling
 
-[ ] Debug disabled
+[x] Debug disabled
 
 ---
 
@@ -327,8 +327,8 @@ Potential modules:
 - Open Redirect
 - Insecure Cookie Configuration
 - CORS Misconfiguration
-- Information Disclosure
-- Directory Listing
+- [x] Information Disclosure
+- [x] Directory Listing
 - Server Information Disclosure
 - Mixed Content
 - TLS configuration

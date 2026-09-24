@@ -42,6 +42,9 @@
         <div class="authorized-badge">
             Authorized Local Target
         </div>
+        <div style="margin-left: 20px;">
+            <a href="{{ url_for('logout') }}" style="color: white; text-decoration: underline;">Logout</a>
+        </div>
 
     </header>
 
@@ -211,6 +214,7 @@
             action="{{ url_for('start_scan') }}"
             class="scan-form"
         >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
             <input
                 type="url"
@@ -1225,6 +1229,21 @@ loadVulnerabilityDistribution();
 
 </script>
 
+
+{% set has_running_scans = False %}
+{% for scan in scans %}
+    {% if scan.status == 'running' or scan.status == 'pending' %}
+        {% set has_running_scans = True %}
+    {% endif %}
+{% endfor %}
+
+{% if has_running_scans %}
+<script>
+    setTimeout(function() {
+        window.location.reload();
+    }, 5000);
+</script>
+{% endif %}
 
 </body>
 
